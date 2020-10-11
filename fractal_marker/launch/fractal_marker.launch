@@ -1,0 +1,17 @@
+<launch>
+
+    <arg name="fractal_marker_id"        default="FRACTAL_4L_6"/>
+    <arg name="marker_size"              default="0.034"/>    <!-- in m -->
+    <arg name="camera_index"             default="0"/>
+    <arg name="camera_parameter_file"    default="/home/boirng/catkin_ws3/src/fractal_marker/config/camera/c270.yaml"/>
+    <arg name="input_camera_topic"    default="/camera/image_raw"/>
+
+    <node pkg="fractal_marker" type="fractal_marker_node" name="fractal_marker_node" output="screen">
+        <param name="fractal_marker_id"    value="$(arg fractal_marker_id)"/>   <!-- frame in which the marker pose will be refered -->
+        <param name="marker_size"       value="$(arg marker_size)" />
+        <param name="camera_index"       value="$(arg camera_index)" />
+        <param name="camera_parameter_file"  value="$(arg camera_parameter_file)" />
+        <param name="input_camera_topic"  value="$(arg input_camera_topic)" />
+    </node>
+
+</launch>

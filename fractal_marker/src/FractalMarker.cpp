@@ -5,125 +5,125 @@
 #include <tf/transform_broadcaster.h>
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/core/core.hpp>
-
+#include <cv_bridge/cv_bridge.h>
 
 namespace fractal_marker{
 
     FractalMarker::FractalMarker(ros::NodeHandle& nodeHandle) 
         : nodeHandle_(nodeHandle)
     {
+    
 
-    takeVideo();
+    nodeHandle_.param<std::string>("/fractal_marker_node/fractal_marker_id", markerID, "FRACTAL_4L_6");
+    nodeHandle_.param<double>("/fractal_marker_node/marker_size", markerSize, 1.7);
+    nodeHandle_.param<int>("/fractal_marker_node/camera_index", cameraIndex, 0);
+    nodeHandle_.param<std::string>("/fractal_marker_node/camera_parameter_file", 
+                                    cameraParamFile, 
+                                    "/home/boirng/catkin_ws3/src/fractal_marker/config/camera/c270.yaml");
+    nodeHandle_.param<std::string>("/fractal_marker_node/input_camera_topic", inputCamTopic, "/camera/image_raw");
+                                
+    
+    ROS_INFO("------- Fractal Marker param list -------");
+    ROS_INFO("markerId: %s", markerID.c_str());
+    ROS_INFO("markerSize: %f", markerSize);
+    ROS_INFO("cameraIndex: %d", cameraIndex);
+    ROS_INFO("cameraParamFile: %s", cameraParamFile.c_str());
+    ROS_INFO("inputCamTopic: %s", inputCamTopic.c_str());
+    ROS_INFO("-----------------------------------------");
+
+    image_transport::ImageTransport it(nodeHandle_);
+    imageSub_ = it.subscribe(inputCamTopic, 1, &FractalMarker::imageCallback, this);
+
+    CamParam_.readFromXMLFile(cameraParamFile);
+    FDetector_.setConfiguration(markerID);
+
+    if (CamParam_.isValid())
+    {
+        cv::Size sz(640, 480);
+        CamParam_.resize(sz);
+        FDetector_.setParams(CamParam_, markerSize);
+    }
+
+    //track();
 
     }
 
-    bool FractalMarker::takeVideo(){
+    void FractalMarker::imageCallback(const sensor_msgs::ImageConstPtr& msg)
+    {
 
-        try 
+        cv_bridge::CvImageConstPtr cv_ptr;
+        try
+        {
+            cv_ptr = cv_bridge::toCvShare(msg, sensor_msgs::image_encodings::BGR8);
+        }
+        catch (cv_bridge::Exception& e)
+        {
+            ROS_ERROR("cv_bridge exception: %s", e.what());
+            return;
+        }
+        
+        imageFractal_ = cv_ptr->image;
+        estimatePose(imageFractal_);
+
+    }
+
+    void FractalMarker::estimatePose(cv::Mat InImage){
+
+        char key = 0;
+        int waitTime=10;
+
+        if(FDetector_.detect(InImage))
         {
 
-            aruco::CameraParameters CamParam;
+        }                
 
-            cv::Mat InImage;
-            // Open input and read image
-            cv::VideoCapture vreader;
-            bool isVideo=false;
+        //Pose estimation
+        if(FDetector_.poseEstimation()){
 
-            vreader.open(0);
+            //Calc distance to marker
+            cv::Mat tvec = FDetector_.getTvec();
+            cv::Mat rvec = FDetector_.getRvec();
+            cv::Mat rotationMatrix(cv::Size(3, 3 ), CV_64FC1);
 
-            isVideo = true;
+            FDetector_.draw3d(InImage); //3d
 
+            static tf::TransformBroadcaster br;
+            tf::Transform transform;
 
-            if (vreader.isOpened())
-                vreader >> InImage;
-            else
-            {
-                std::cerr << "Could not open input" << std::endl;
-                return true;
-            }
+            cv::Rodrigues(rvec, rotationMatrix);
 
-            // read camera parameters if passed
+            tf::Matrix3x3 rotationMatrix3x3; 
+            rotationMatrix3x3.setValue(
+
+                rotationMatrix.at<double>(0,0), rotationMatrix.at<double>(0,1), rotationMatrix.at<double>(0,2),
+                rotationMatrix.at<double>(1,0), rotationMatrix.at<double>(1,1), rotationMatrix.at<double>(1,2),
+                rotationMatrix.at<double>(2,0), rotationMatrix.at<double>(2,1), rotationMatrix.at<double>(2,2)
+
+            );
+
+            tf::Quaternion q;
+            rotationMatrix3x3.getRotation(q);
+
+            tf::Vector3 tvecVector3; 
+            tvecVector3.setValue(tvec.at<double>(0,0), tvec.at<double>(0,1), tvec.at<double>(0,2)); 
+
+            transform.setOrigin(tvecVector3);
+            transform.setRotation(q);
             
-            CamParam.readFromXMLFile("/home/boirng/catkin_ws3/src/fractal_marker/config/camera/c270.yaml");
+            br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", "camera"));
 
-            // read marker size
-            float MarkerSize = 0.0385;
-
-            aruco::FractalDetector FDetector;
-            FDetector.setConfiguration("FRACTAL_4L_6");
-
-            if (CamParam.isValid())
-            {
-                CamParam.resize(InImage.size());
-                FDetector.setParams(CamParam, MarkerSize);
+            }
+            else{
+                FDetector_.draw2d(InImage); //Ok, show me at least the inner corners!
             }
 
-            int frameId = 0;
-            char key = 0;
-            int waitTime=10;
-            do
-            {
-                //std::cout << "\r\rFrameId: " << frameId++<<std::endl;
-                vreader.retrieve(InImage);
+            cv::imshow("in", __resize(InImage, 1800));
+            key = cv::waitKey(waitTime);  // wait for key to be pressed
+            if (key == 's')
+                waitTime = waitTime == 0 ? 10 : 0;
 
-                // Ok, let's detect
-                if(FDetector.detect(InImage))
-                {
-
-                }
-
-                //Pose estimation
-                if(FDetector.poseEstimation()){
-
-                    //Calc distance to marker
-                    cv::Mat tvec = FDetector.getTvec();
-                    cv::Mat rvec = FDetector.getRvec();
-                    cv::Mat rotationMatrix(cv::Size(3, 3 ), CV_64FC1);
-
-                    FDetector.draw3d(InImage); //3d
-
-                    static tf::TransformBroadcaster br;
-                    tf::Transform transform;
-
-                    cv::Rodrigues(rvec, rotationMatrix);
-
-                    tf::Matrix3x3 rotationMatrix3x3; 
-                    rotationMatrix3x3.setValue(
-
-                        rotationMatrix.at<double>(0,0), rotationMatrix.at<double>(0,1), rotationMatrix.at<double>(0,2),
-                        rotationMatrix.at<double>(1,0), rotationMatrix.at<double>(1,1), rotationMatrix.at<double>(1,2),
-                        rotationMatrix.at<double>(2,0), rotationMatrix.at<double>(2,1), rotationMatrix.at<double>(2,2)
-
-                    );
-
-                    tf::Quaternion q;
-                    rotationMatrix3x3.getRotation(q);
-
-                    tf::Vector3 tvecVector3; 
-                    tvecVector3.setValue(tvec.at<double>(0,0), tvec.at<double>(0,1), tvec.at<double>(0,2)); 
-
-                    transform.setOrigin(tvecVector3);
-                    transform.setRotation(q);
-                    
-                    br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", "camera"));
-
-
-                }
-                else
-                    FDetector.draw2d(InImage); //Ok, show me at least the inner corners!
-
-                cv::imshow("in", __resize(InImage, 1800));
-                key = cv::waitKey(waitTime);  // wait for key to be pressed
-                if (key == 's')
-                    waitTime = waitTime == 0 ? 10 : 0;
-
-            } while (key != 27 && vreader.grab());
-        }
-        catch (std::exception& ex)
-        {
-            std::cout << "Exception :" << ex.what() << std::endl;
-        }
     }
+
 
     cv::Mat FractalMarker::__resize(const cv::Mat& in, int width)
     {
