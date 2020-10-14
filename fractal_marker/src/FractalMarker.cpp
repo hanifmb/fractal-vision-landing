@@ -19,7 +19,7 @@ namespace fractal_marker{
     nodeHandle_.param<int>("/fractal_marker_node/camera_index", cameraIndex, 0);
     nodeHandle_.param<std::string>("/fractal_marker_node/camera_parameter_file", 
                                     cameraParamFile, 
-                                    "/home/boirng/catkin_ws3/src/fractal_marker/config/camera/c270.yaml");
+                                    "/home/odroid/catkin_ws/src/fractal_marker/config/camera/c270.yaml");
     nodeHandle_.param<std::string>("/fractal_marker_node/input_camera_topic", inputCamTopic, "/camera/image_raw");
                                 
     
@@ -69,71 +69,52 @@ namespace fractal_marker{
 
     void FractalMarker::estimatePose(cv::Mat InImage){
 
-        char key = 0;
-        int waitTime=10;
 
-        if(FDetector_.detect(InImage))
-        {
+        if(FDetector_.detect(InImage)){
 
-        }                
+            //Pose estimation
+            if(FDetector_.poseEstimation()){
 
-        //Pose estimation
-        if(FDetector_.poseEstimation()){
+                //Calc distance to marker
+                cv::Mat tvec = FDetector_.getTvec();
+                cv::Mat rvec = FDetector_.getRvec();
+                cv::Mat rotationMatrix(cv::Size(3, 3 ), CV_64FC1);
 
-            //Calc distance to marker
-            cv::Mat tvec = FDetector_.getTvec();
-            cv::Mat rvec = FDetector_.getRvec();
-            cv::Mat rotationMatrix(cv::Size(3, 3 ), CV_64FC1);
+                FDetector_.draw3d(InImage); //3d
 
-            FDetector_.draw3d(InImage); //3d
+                static tf::TransformBroadcaster br;
+                tf::Transform transform;
 
-            static tf::TransformBroadcaster br;
-            tf::Transform transform;
+                cv::Rodrigues(rvec, rotationMatrix);
 
-            cv::Rodrigues(rvec, rotationMatrix);
+                tf::Matrix3x3 rotationMatrix3x3; 
+                rotationMatrix3x3.setValue(
 
-            tf::Matrix3x3 rotationMatrix3x3; 
-            rotationMatrix3x3.setValue(
+                    rotationMatrix.at<double>(0,0), rotationMatrix.at<double>(0,1), rotationMatrix.at<double>(0,2),
+                    rotationMatrix.at<double>(1,0), rotationMatrix.at<double>(1,1), rotationMatrix.at<double>(1,2),
+                    rotationMatrix.at<double>(2,0), rotationMatrix.at<double>(2,1), rotationMatrix.at<double>(2,2)
 
-                rotationMatrix.at<double>(0,0), rotationMatrix.at<double>(0,1), rotationMatrix.at<double>(0,2),
-                rotationMatrix.at<double>(1,0), rotationMatrix.at<double>(1,1), rotationMatrix.at<double>(1,2),
-                rotationMatrix.at<double>(2,0), rotationMatrix.at<double>(2,1), rotationMatrix.at<double>(2,2)
+                );
 
-            );
+                tf::Quaternion q;
+                rotationMatrix3x3.getRotation(q);
 
-            tf::Quaternion q;
-            rotationMatrix3x3.getRotation(q);
+                tf::Vector3 tvecVector3; 
+                tvecVector3.setValue(tvec.at<double>(0,0), tvec.at<double>(0,1), tvec.at<double>(0,2)); 
 
-            tf::Vector3 tvecVector3; 
-            tvecVector3.setValue(tvec.at<double>(0,0), tvec.at<double>(0,1), tvec.at<double>(0,2)); 
-
-            transform.setOrigin(tvecVector3);
-            transform.setRotation(q);
-            
-            br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", "camera"));
+                transform.setOrigin(tvecVector3);
+                transform.setRotation(q);
+                
+                br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", "camera"));
 
             }
+
             else{
                 FDetector_.draw2d(InImage); //Ok, show me at least the inner corners!
             }
-
-            cv::imshow("in", __resize(InImage, 1800));
-            key = cv::waitKey(waitTime);  // wait for key to be pressed
-            if (key == 's')
-                waitTime = waitTime == 0 ? 10 : 0;
+                
+        }                
 
     }
-
-
-    cv::Mat FractalMarker::__resize(const cv::Mat& in, int width)
-    {
-        if (in.size().width <= width)
-            return in;
-        float yf = float(width) / float(in.size().width);
-        cv::Mat im2;
-        cv::resize(in, im2, cv::Size(width, static_cast<int>(in.size().height * yf)));
-        return im2;
-    }
-
 
 }
