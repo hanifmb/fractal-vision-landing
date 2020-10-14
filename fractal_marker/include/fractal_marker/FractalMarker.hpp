@@ -12,6 +12,7 @@ namespace fractal_marker{
         FractalMarker(ros::NodeHandle& nodeHandle);
 
         private:
+        
 
         cv::Mat __resize(const cv::Mat& in, int width);
 
@@ -39,6 +40,8 @@ namespace fractal_marker{
         aruco::CameraParameters CamParam_;
 
         aruco::FractalDetector FDetector_;
+
+        ros::Publisher fractalPosePub_;
 
     };
 

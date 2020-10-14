@@ -10,8 +10,8 @@ namespace vision_landing{
         : nodeHandle_(nodeHandle)
     {
 
-        nodeHandle_.param<double>("/vision_landing_node/kp", kp, 1.0);
-        nodeHandle_.param<double>("/vision_landing_mode/takeoff_alt", takeOffAlt, 8); 
+        nodeHandle_.param<double>("/vision_landing_node/kp", kp, 0.2);
+        nodeHandle_.param<double>("/vision_landing_mode/takeoff_alt", takeOffAlt, 10); 
 
         //Subscribers
         stateSub_ = nodeHandle_.subscribe<mavros_msgs::State>("/mavros/state", 10, &DroneController::stateCallback, this);

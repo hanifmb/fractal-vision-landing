@@ -6,6 +6,9 @@
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/core/core.hpp>
 #include <cv_bridge/cv_bridge.h>
+#include <tf/transform_datatypes.h>
+#include <geometry_msgs/Pose.h>
+
 
 namespace fractal_marker{
 
@@ -33,6 +36,8 @@ namespace fractal_marker{
 
     image_transport::ImageTransport it(nodeHandle_);
     imageSub_ = it.subscribe(inputCamTopic, 1, &FractalMarker::imageCallback, this);
+
+    fractalPosePub_ = nodeHandle_.advertise<geometry_msgs::Pose>("/fractal_marker_node/pose", 1);
 
     CamParam_.readFromXMLFile(cameraParamFile);
     FDetector_.setConfiguration(markerID);
@@ -102,11 +107,28 @@ namespace fractal_marker{
                 tf::Vector3 tvecVector3; 
                 tvecVector3.setValue(tvec.at<double>(0,0), tvec.at<double>(0,1), tvec.at<double>(0,2)); 
 
+                //sending transform
                 transform.setOrigin(tvecVector3);
                 transform.setRotation(q);
                 
                 br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", "camera"));
 
+                //sending pose
+                geometry_msgs::Pose pose;
+
+                geometry_msgs::Quaternion quaternionMsg;
+                geometry_msgs::Point pointMsg;
+
+                tf::quaternionTFToMsg(q , quaternionMsg);
+
+                pointMsg.x = tvecVector3.getX();
+                pointMsg.y = tvecVector3.getY();
+                pointMsg.z = tvecVector3.getZ();
+
+                pose.orientation = quaternionMsg;
+                pose.position = pointMsg; 
+
+                fractalPosePub_.publish(pose);
             }
 
             else{
