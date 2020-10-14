@@ -26,8 +26,22 @@ namespace vision_landing{
         armingClient_ = nodeHandle_.serviceClient<mavros_msgs::CommandBool>("/mavros/cmd/arming");
         setModeClient_ = nodeHandle_.serviceClient<mavros_msgs::SetMode>("/mavros/set_mode");
         takeOffClient_ = nodeHandle_.serviceClient<mavros_msgs::CommandTOL>("/mavros/cmd/takeoff");
+        rateClient_ = nodeHandle_.serviceClient<mavros_msgs::StreamRate>("/mavros/set_stream_rate");
 
+        //server
         landingServer_ = nodeHandle_.advertiseService("/start_vision_landing", &DroneController::triggerVisionLanding, this);
+
+        ROS_INFO("Waiting for stream rate service...");
+        ros::service::waitForService("/mavros/set_stream_rate", -1);
+
+        rateMsg_.request.stream_id = 0; 
+        rateMsg_.request.message_rate = 10;
+        rateMsg_.request.on_off = 1;
+
+        rateClient_.call(rateMsg_);
+        
+        ROS_INFO("Stream rate is set");
+
     }
 
     bool DroneController::setMode(std::string mode){

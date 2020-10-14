@@ -12,7 +12,7 @@
 #include <mavros_msgs/WaypointReached.h>
 #include <tf/transform_listener.h>
 #include <std_srvs/Trigger.h>
-
+#include <mavros_msgs/StreamRate.h>
 
 namespace vision_landing{
 
@@ -45,9 +45,13 @@ namespace vision_landing{
 
         ros::ServiceClient armingClient_;
 
+        ros::ServiceClient rateClient_; 
+
         mavros_msgs::State stateMsg_;
 
         mavros_msgs::WaypointReached missionReachedMsg_; 
+
+        mavros_msgs::StreamRate rateMsg_;
 
         std_msgs::Float64 currentRelativeAlt_;
 
