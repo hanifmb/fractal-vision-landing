@@ -10,17 +10,17 @@ namespace vision_landing{
         : nodeHandle_(nodeHandle)
     {
 
-        nodeHandle_.param<double>("/vision_landing_node/kp", kp, 0.2);
-        nodeHandle_.param<double>("/vision_landing_mode/takeoff_alt", takeOffAlt, 10); 
+        nodeHandle_.param<double>("/drone_controller_node/kp", kp, 0.2);
+        nodeHandle_.param<double>("/drone_controller_node/takeoff_alt", takeOffAlt, 10); 
 
         //Subscribers
         stateSub_ = nodeHandle_.subscribe<mavros_msgs::State>("/mavros/state", 10, &DroneController::stateCallback, this);
-        missionReacedSub_ = nodeHandle_.subscribe<mavros_msgs::WaypointReached>("/mavros/mission/reached", 10, &DroneController::missionReachedCallback, this);
-        relativeAltitudeSub_ = nodeHandle_.subscribe<std_msgs::Float64>("/mavros/global_position/rel_alt", 10, &DroneController::relativeAltitudeCallback, this);
+        missionReacedSub_ = nodeHandle_.subscribe<mavros_msgs::WaypointReached>("/mavros/mission/reached", 1, &DroneController::missionReachedCallback, this);
+        relativeAltitudeSub_ = nodeHandle_.subscribe<std_msgs::Float64>("/mavros/global_position/rel_alt", 1, &DroneController::relativeAltitudeCallback, this);
 
         //Publisher
-        rawSetpointPub_ = nodeHandle_.advertise<mavros_msgs::PositionTarget>("/mavros/setpoint_raw/local", 10);
-        rcOverridePub_ = nodeHandle_.advertise<mavros_msgs::OverrideRCIn>("/mavros/rc/override", 10);
+        rawSetpointPub_ = nodeHandle_.advertise<mavros_msgs::PositionTarget>("/mavros/setpoint_raw/local", 1);
+        rcOverridePub_ = nodeHandle_.advertise<mavros_msgs::OverrideRCIn>("/mavros/rc/override", 1);
 
         //client
         armingClient_ = nodeHandle_.serviceClient<mavros_msgs::CommandBool>("/mavros/cmd/arming");
@@ -53,7 +53,7 @@ namespace vision_landing{
             ROS_INFO("Switching mode");
 
             if(setModeClient_.call(modeMsg) && modeMsg.response.mode_sent){
-                ROS_INFO("GUIDED enabled");
+                ROS_INFO("%s enabled", mode.c_str());
                 break;
             }
 
@@ -216,12 +216,14 @@ namespace vision_landing{
                 double originX = origin.getX();
                 double originY = origin.getY();
 
+                ROS_INFO("kp : %f", kp);
+
                 double outputX = proportionalControl(kp, originX, 0);
                 double outputY = proportionalControl(kp, originY, 0);
-                double outputZ = executedOnceAlready ? 0.5 : 0; 
+                double outputZ = executedOnceAlready ? 0.0 : 0; 
 
 
-                sendVelocity(-outputX, outputY, -outputZ);
+                sendVelocity(outputX, -outputY, -outputZ);
 
                 if(std::abs(originX) < 0.2 && std::abs(originY) < 0.2 && !executedOnceAlready){
                    executedOnceAlready = true; 
@@ -240,7 +242,6 @@ namespace vision_landing{
         //timeout currently infinite
         while(missionReachedMsg_.wp_seq != wp){
            ros::Duration(1).sleep();
-            ROS_INFO("missionReachedMsg %d", missionReachedMsg_.wp_seq);
         }
 
     }
