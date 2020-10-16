@@ -17,6 +17,7 @@ namespace vision_landing{
         stateSub_ = nodeHandle_.subscribe<mavros_msgs::State>("/mavros/state", 10, &DroneController::stateCallback, this);
         missionReacedSub_ = nodeHandle_.subscribe<mavros_msgs::WaypointReached>("/mavros/mission/reached", 1, &DroneController::missionReachedCallback, this);
         relativeAltitudeSub_ = nodeHandle_.subscribe<std_msgs::Float64>("/mavros/global_position/rel_alt", 1, &DroneController::relativeAltitudeCallback, this);
+        rangefinderSub_ = nodeHandle_.subscribe<sensor_msgs::Range>("/mavros/distance_sensor/rangefinder_pub", 1, &DroneController::rangefinderCallback, this);
 
         //Publisher
         rawSetpointPub_ = nodeHandle_.advertise<mavros_msgs::PositionTarget>("/mavros/setpoint_raw/local", 1);
@@ -147,6 +148,12 @@ namespace vision_landing{
 
     }
 
+    void DroneController::rangefinderCallback(const sensor_msgs::Range::ConstPtr& msg){
+
+        rangeMsg_ = *msg;
+
+    }
+
     void DroneController::missionReachedCallback(const mavros_msgs::WaypointReached::ConstPtr& msg){
         missionReachedMsg_ = *msg;
     }
@@ -211,7 +218,7 @@ namespace vision_landing{
 
             tf::Vector3 origin = transform.getOrigin();
 
-            if(lastTransform.data >= 0 && lastTransform.data <= 3 ){
+            if(lastTransform.data >= 0 && lastTransform.data <= 2 ){
 
                 double originX = origin.getX();
                 double originY = origin.getY();
@@ -220,19 +227,26 @@ namespace vision_landing{
 
                 double outputX = proportionalControl(kp, originX, 0);
                 double outputY = proportionalControl(kp, originY, 0);
-                double outputZ = executedOnceAlready ? 0.0 : 0; 
+                double outputZ = executedOnceAlready ? 0.5 : 0; 
 
 
                 sendVelocity(outputX, -outputY, -outputZ);
 
-                if(std::abs(originX) < 0.2 && std::abs(originY) < 0.2 && !executedOnceAlready){
+                if(std::abs(originX) < 0.5 && std::abs(originY) < 0.5 && !executedOnceAlready){
                    executedOnceAlready = true; 
                 }
 
             }
 
+            if(rangeMsg_.range <= 1.2){                      
+                break;
+            }
+
             rate.sleep();
+
         }
+
+        setMode("LAND");
 
         return true;
     }

@@ -13,6 +13,8 @@
 #include <tf/transform_listener.h>
 #include <std_srvs/Trigger.h>
 #include <mavros_msgs/StreamRate.h>
+#include <sensor_msgs/Range.h>
+
 
 namespace vision_landing{
 
@@ -35,6 +37,8 @@ namespace vision_landing{
 
         ros::Subscriber relativeAltitudeSub_;
 
+        ros::Subscriber rangefinderSub_;
+
         ros::Publisher rawSetpointPub_;
 
         ros::Publisher rcOverridePub_;
@@ -46,6 +50,8 @@ namespace vision_landing{
         ros::ServiceClient armingClient_;
 
         ros::ServiceClient rateClient_; 
+
+        sensor_msgs::Range rangeMsg_;
 
         mavros_msgs::State stateMsg_;
 
@@ -85,6 +91,8 @@ namespace vision_landing{
         bool startVisionLanding();
 
         bool waitToReachWP(int wp);
+
+        void rangefinderCallback(const sensor_msgs::Range::ConstPtr& msg);
 
     };
 }
