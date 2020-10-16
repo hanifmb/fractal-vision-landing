@@ -1,16 +1,19 @@
 <launch>
 	<include file="$(find mavros)/launch/apm.launch">
-			<arg name="fcu_url" value="/dev/ttyACM0:57600" /> 
-				<!-- <arg name="fcu_url" value="udp://127.0.0.1:14551@" /> -->
+			<!-- <arg name="fcu_url" value="/dev/ttyACM0:57600" /> -->
+			<arg name="fcu_url" value="udp://127.0.0.1:14551@" />
 	</include>
 
 	<include file="$(find video_stream_opencv)/launch/camera.launch">
 	</include>
 
 	<include file="$(find fractal_marker)/launch/fractal_marker.launch">
+		<arg name="camera_parameter_file" value="/home/boirng/catkin_ws3/src/fractal_marker/config/camera/c270.yaml" />
+		<arg name="input_camera_topic" value="/rrbot/camera1/image_raw" />
 	</include>
 
 	<include file="$(find vision_landing)/launch/drone_controller.launch">
+
 	</include>
 
     <node pkg="web_video_server" type="web_video_server" name="web_video_server" output="screen">
