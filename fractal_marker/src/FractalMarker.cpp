@@ -70,8 +70,6 @@ namespace fractal_marker{
         
         imageFractal_ = cv_ptr->image;
 
-        sensor_msgs::ImagePtr imageMsg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", imageFractal_).toImageMsg();
-        imagePub_.publish(imageMsg);
 
         estimatePose(imageFractal_);
 
@@ -140,6 +138,9 @@ namespace fractal_marker{
                 FDetector_.draw2d(InImage); //Ok, show me at least the inner corners!
             }
                 
+            sensor_msgs::ImagePtr imageMsg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", InImage).toImageMsg();
+            imagePub_.publish(imageMsg);
+
         }                
 
     }
