@@ -137,12 +137,11 @@ namespace fractal_marker{
             else{
                 FDetector_.draw2d(InImage); //Ok, show me at least the inner corners!
             }
-                
-            sensor_msgs::ImagePtr imageMsg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", InImage).toImageMsg();
-            imagePub_.publish(imageMsg);
 
         }                
 
+        sensor_msgs::ImagePtr imageMsg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", InImage).toImageMsg();
+        imagePub_.publish(imageMsg);
     }
 
 }
