@@ -36,6 +36,7 @@ namespace fractal_marker{
 
     image_transport::ImageTransport it(nodeHandle_);
     imageSub_ = it.subscribe(inputCamTopic, 1, &FractalMarker::imageCallback, this);
+    imagePub_ = it.advertise("camera/fractal_image", 1);
 
     fractalPosePub_ = nodeHandle_.advertise<geometry_msgs::Pose>("/fractal_marker_node/pose", 1);
 
@@ -68,6 +69,10 @@ namespace fractal_marker{
         }
         
         imageFractal_ = cv_ptr->image;
+
+        sensor_msgs::ImagePtr imageMsg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", imageFractal_).toImageMsg();
+        imagePub_.publish(imageMsg);
+
         estimatePose(imageFractal_);
 
     }

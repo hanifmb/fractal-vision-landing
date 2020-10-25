@@ -43,6 +43,8 @@ namespace fractal_marker{
 
         ros::Publisher fractalPosePub_;
 
+        image_transport::Publisher imagePub_; 
+
     };
 
 }
