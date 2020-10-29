@@ -39,6 +39,8 @@ namespace vision_landing{
 
         ros::Subscriber rangefinderSub_;
 
+        ros::Subscriber poseSub_;
+
         ros::Publisher rawSetpointPub_;
 
         ros::Publisher rcOverridePub_;
@@ -63,6 +65,8 @@ namespace vision_landing{
 
         tf::TransformListener listener;
 
+        geometry_msgs::PoseStamped poseMsg_;
+
         ros::ServiceServer landingServer_;
 
         bool setMode(std::string mode);
@@ -74,6 +78,8 @@ namespace vision_landing{
         void missionReachedCallback(const mavros_msgs::WaypointReached::ConstPtr& msg);
 
         void stateCallback(const mavros_msgs::State::ConstPtr& msg);
+
+        void poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
 
         double proportionalControl(double Kp, double currentState, double setpoint);
 

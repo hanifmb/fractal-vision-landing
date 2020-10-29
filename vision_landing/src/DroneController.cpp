@@ -18,6 +18,7 @@ namespace vision_landing{
         missionReacedSub_ = nodeHandle_.subscribe<mavros_msgs::WaypointReached>("/mavros/mission/reached", 1, &DroneController::missionReachedCallback, this);
         relativeAltitudeSub_ = nodeHandle_.subscribe<std_msgs::Float64>("/mavros/global_position/rel_alt", 1, &DroneController::relativeAltitudeCallback, this);
         rangefinderSub_ = nodeHandle_.subscribe<sensor_msgs::Range>("/mavros/distance_sensor/rangefinder_pub", 1, &DroneController::rangefinderCallback, this);
+        poseSub_ = nodeHandle_.subscribe<geometry_msgs::PoseStamped>("/fractal_marker_node/pose", 1, &DroneController::poseCallback, this);
 
         //Publisher
         rawSetpointPub_ = nodeHandle_.advertise<mavros_msgs::PositionTarget>("/mavros/setpoint_raw/local", 1);
@@ -135,10 +136,7 @@ namespace vision_landing{
         velocityRawMsg.velocity.x = x;
         velocityRawMsg.velocity.y = y;
         velocityRawMsg.velocity.z = z;
-
-        ROS_INFO("%f", x);
-        ROS_INFO("%f", y);
-        ROS_INFO("%f", z);
+        velocityRawMsg.header.stamp = ros::Time::now();
 
         rawSetpointPub_.publish(velocityRawMsg);
 
@@ -151,6 +149,12 @@ namespace vision_landing{
     void DroneController::rangefinderCallback(const sensor_msgs::Range::ConstPtr& msg){
 
         rangeMsg_ = *msg;
+
+    }
+
+    void DroneController::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg){
+
+        poseMsg_ = *msg;
 
     }
 
@@ -180,6 +184,7 @@ namespace vision_landing{
         setMode("GUIDED");
 
         arm();
+
         ros::Duration(5).sleep();
 
         takeOff(takeOffAlt);
@@ -192,64 +197,36 @@ namespace vision_landing{
 
         setMode("GUIDED");
 
-        //use false for sequential axis movement
-        bool executedOnceAlready = true;
         ros::Rate rate(20);
+
         while(ros::ok){
-
-            try{
-                ros::Time now = ros::Time::now();
-                listener.lookupTransform("/world", "/camera",  
-                                        ros::Time(0), transform);
-            }
-                catch (tf::TransformException ex){
-                ROS_ERROR("%s",ex.what());
-            }
-
-            ros::Time now = ros::Time::now(); 
-            std_msgs::Int32 nsecnow; 
-            nsecnow.data = now.sec;
-    
-            std_msgs::Int32 nseclater;
-            nseclater.data = transform.stamp_.sec;
-
-            std_msgs::Int32 lastTransform;
-            lastTransform.data = nsecnow.data - nseclater.data;
-            ROS_INFO("last time = %d", lastTransform.data);
-
-            tf::Vector3 origin = transform.getOrigin();
 
             double outputX = 0;
             double outputY = 0;
-            double outputZ = 0.5;
+            double outputZ = 0.500;
 
-            if(lastTransform.data >= 0 && lastTransform.data <= 2 ){
+            int lastPose = ros::Time::now().sec - poseMsg_.header.stamp.sec;
+            if(lastPose >= 0 && lastPose <= 1){
+                
+                double markerTranslationX = poseMsg_.pose.position.x;
+                double markerTranslationY = poseMsg_.pose.position.y;
 
-                double originX = origin.getX();
-                double originY = origin.getY();
+                outputX = proportionalControl(kp, markerTranslationX, 0);
+                outputY = proportionalControl(kp, markerTranslationY, 0);
 
-                ROS_INFO("kp : %f", kp);
+                ROS_INFO("outputX = %f", outputX);
+                ROS_INFO("outputY = %f", outputY);
+                ROS_INFO("last pose = %i", lastPose);
 
-                outputX = proportionalControl(kp, originX, 0);
-                outputY = proportionalControl(kp, originY, 0);
-
-                /*
-
-                if(std::abs(originX) < 0.5 && std::abs(originY) < 0.5 && !executedOnceAlready){
-                   executedOnceAlready = true; 
-                }
-
-                */
             }
 
-            sendVelocity(outputX, -outputY, -outputZ);
+            sendVelocity(-outputX, outputY, -outputZ);
 
             if(rangeMsg_.range <= 1.2){                      
                 break;
             }
 
             rate.sleep();
-
         }
 
         setMode("LAND");

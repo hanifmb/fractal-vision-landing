@@ -38,7 +38,7 @@ namespace fractal_marker{
     imageSub_ = it.subscribe(inputCamTopic, 1, &FractalMarker::imageCallback, this);
     imagePub_ = it.advertise("camera/fractal_image", 1);
 
-    fractalPosePub_ = nodeHandle_.advertise<geometry_msgs::Pose>("/fractal_marker_node/pose", 1);
+    fractalPosePub_ = nodeHandle_.advertise<geometry_msgs::PoseStamped>("/fractal_marker_node/pose", 1);
 
     CamParam_.readFromXMLFile(cameraParamFile);
     FDetector_.setConfiguration(markerID);
@@ -117,7 +117,7 @@ namespace fractal_marker{
                 br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", "camera"));
 
                 //sending pose
-                geometry_msgs::Pose pose;
+                geometry_msgs::PoseStamped poseStamped;
 
                 geometry_msgs::Quaternion quaternionMsg;
                 geometry_msgs::Point pointMsg;
@@ -128,10 +128,11 @@ namespace fractal_marker{
                 pointMsg.y = tvecVector3.getY();
                 pointMsg.z = tvecVector3.getZ();
 
-                pose.orientation = quaternionMsg;
-                pose.position = pointMsg; 
+                poseStamped.pose.orientation = quaternionMsg;
+                poseStamped.pose.position = pointMsg; 
+                poseStamped.header.stamp = ros::Time::now();
 
-                fractalPosePub_.publish(pose);
+                fractalPosePub_.publish(poseStamped);
             }
 
             else{
