@@ -230,8 +230,8 @@ namespace vision_landing{
 
                 ROS_INFO("kp : %f", kp);
 
-                double outputX = proportionalControl(kp, originX, 0);
-                double outputY = proportionalControl(kp, originY, 0);
+                outputX = proportionalControl(kp, originX, 0);
+                outputY = proportionalControl(kp, originY, 0);
 
                 /*
 
