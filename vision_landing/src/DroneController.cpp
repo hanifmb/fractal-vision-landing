@@ -11,7 +11,7 @@ namespace vision_landing{
     {
 
         nodeHandle_.param<double>("/drone_controller_node/kp", kp, 0.2);
-        nodeHandle_.param<double>("/drone_controller_node/takeoff_alt", takeOffAlt, 10); 
+        nodeHandle_.param<double>("/drone_controller_node/alt", takeOffAlt, 10); 
 
         //Subscribers
         stateSub_ = nodeHandle_.subscribe<mavros_msgs::State>("/mavros/state", 10, &DroneController::stateCallback, this);
@@ -192,7 +192,8 @@ namespace vision_landing{
 
         setMode("GUIDED");
 
-        bool executedOnceAlready = false;
+        //use false for sequential axis movement
+        bool executedOnceAlready = true;
         ros::Rate rate(20);
         while(ros::ok){
 
@@ -218,6 +219,10 @@ namespace vision_landing{
 
             tf::Vector3 origin = transform.getOrigin();
 
+            double outputX = 0;
+            double outputY = 0;
+            double outputZ = 0.5;
+
             if(lastTransform.data >= 0 && lastTransform.data <= 2 ){
 
                 double originX = origin.getX();
@@ -227,16 +232,17 @@ namespace vision_landing{
 
                 double outputX = proportionalControl(kp, originX, 0);
                 double outputY = proportionalControl(kp, originY, 0);
-                double outputZ = executedOnceAlready ? 0.5 : 0; 
 
-
-                sendVelocity(outputX, -outputY, -outputZ);
+                /*
 
                 if(std::abs(originX) < 0.5 && std::abs(originY) < 0.5 && !executedOnceAlready){
                    executedOnceAlready = true; 
                 }
 
+                */
             }
+
+            sendVelocity(outputX, -outputY, -outputZ);
 
             if(rangeMsg_.range <= 1.2){                      
                 break;

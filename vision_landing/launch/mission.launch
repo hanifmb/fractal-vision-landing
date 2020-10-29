@@ -13,9 +13,6 @@
 	<include file="$(find vision_landing)/launch/drone_controller.launch">
 	</include>
 
-	<include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch">
-	</include>
-
     <node pkg="web_video_server" type="web_video_server" name="web_video_server" output="screen">
     </node>
 </launch>
