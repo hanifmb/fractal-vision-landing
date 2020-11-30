@@ -13,6 +13,9 @@ find_package(catkin REQUIRED COMPONENTS
   tf
 )
 
+add_service_files(FILES teleop.srv)
+generate_messages(DEPENDENCIES std_msgs)
+
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES vision_landing
@@ -31,7 +34,6 @@ add_library(vision_landing
 )
 add_dependencies(vision_landing ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(vision_landing ${catkin_LIBRARIES})
-
 
 add_executable(drone_controller_node src/drone_controller_node.cpp)
 target_link_libraries(drone_controller_node vision_landing ${catkin_LIBRARIES})

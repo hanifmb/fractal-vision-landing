@@ -7,7 +7,7 @@ int main(int argc, char** argv)
 
   vision_landing::DroneController droneController(nodeHandle);
   
-  ros::MultiThreadedSpinner spinner(0);
+  ros::MultiThreadedSpinner spinner(4);
   spinner.spin(); 
 
   return 0;

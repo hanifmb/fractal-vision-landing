@@ -1,5 +1,6 @@
 #include <vision_landing/DroneController.hpp>
 #include <std_msgs/Int32.h>
+#include <std_msgs/String.h>
 #include <string>
 #include <std_srvs/Trigger.h>
 #include <cmath>
@@ -32,6 +33,8 @@ namespace vision_landing{
 
         //server
         landingServer_ = nodeHandle_.advertiseService("/start_vision_landing", &DroneController::triggerVisionLanding, this);
+        teleopServer_ = nodeHandle_.advertiseService("/teleop/command", &DroneController::teleop, this);
+
 
         ROS_INFO("Waiting for stream rate service...");
         ros::service::waitForService("/mavros/set_stream_rate", -1);
@@ -176,6 +179,19 @@ namespace vision_landing{
         
     }
 
+    bool DroneController::teleop(vision_landing::teleop::Request& request,
+                       vision_landing::teleop::Response& response)
+    {
+
+        if(request.cmd == "LAND"){
+                
+           land();
+        
+        }
+
+        return true;
+    }
+
     bool DroneController::startVisionLanding(){
 
         tf::TransformListener listener;
@@ -194,6 +210,13 @@ namespace vision_landing{
         ROS_INFO("Waiting to reach WP...");
 
         waitToReachWP(1);
+
+        land();
+
+        return true;
+    }
+
+    void DroneController::land(){
 
         setMode("GUIDED");
 
@@ -214,11 +237,12 @@ namespace vision_landing{
                 outputX = proportionalControl(kp, markerTranslationX, 0);
                 outputY = proportionalControl(kp, markerTranslationY, 0);
 
-                ROS_INFO("outputX = %f", outputX);
-                ROS_INFO("outputY = %f", outputY);
-                ROS_INFO("last pose = %i", lastPose);
 
             }
+
+            ROS_INFO("outputX = %f", outputX);
+            ROS_INFO("outputY = %f", outputY);
+            ROS_INFO("last pose = %i", lastPose);
 
             sendVelocity(-outputX, outputY, -outputZ);
 
@@ -231,7 +255,6 @@ namespace vision_landing{
 
         setMode("LAND");
 
-        return true;
     }
 
     bool DroneController::waitToReachWP(int wp){

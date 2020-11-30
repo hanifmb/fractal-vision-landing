@@ -14,6 +14,7 @@
 #include <std_srvs/Trigger.h>
 #include <mavros_msgs/StreamRate.h>
 #include <sensor_msgs/Range.h>
+#include "vision_landing/teleop.h"
 
 
 namespace vision_landing{
@@ -68,6 +69,13 @@ namespace vision_landing{
         geometry_msgs::PoseStamped poseMsg_;
 
         ros::ServiceServer landingServer_;
+
+        ros::ServiceServer teleopServer_;
+
+        bool teleop(vision_landing::teleop::Request& request,
+                       vision_landing::teleop::Response& response);
+
+        void land();
 
         bool setMode(std::string mode);
 
