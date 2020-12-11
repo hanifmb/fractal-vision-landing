@@ -4,6 +4,8 @@
 #include <string>
 #include <std_srvs/Trigger.h>
 #include <cmath>
+#include <boost/thread.hpp>
+
 
 namespace vision_landing{
 
@@ -20,6 +22,7 @@ namespace vision_landing{
         relativeAltitudeSub_ = nodeHandle_.subscribe<std_msgs::Float64>("/mavros/global_position/rel_alt", 1, &DroneController::relativeAltitudeCallback, this);
         rangefinderSub_ = nodeHandle_.subscribe<sensor_msgs::Range>("/mavros/distance_sensor/rangefinder_pub", 1, &DroneController::rangefinderCallback, this);
         poseSub_ = nodeHandle_.subscribe<geometry_msgs::PoseStamped>("/fractal_marker_node/pose", 1, &DroneController::poseCallback, this);
+        rcinSub_ = nodeHandle_.subscribe<mavros_msgs::RCIn>("/mavros/rc/in", 1, &DroneController::rcinCallback, this);
 
         //Publisher
         rawSetpointPub_ = nodeHandle_.advertise<mavros_msgs::PositionTarget>("/mavros/setpoint_raw/local", 1);
@@ -46,6 +49,8 @@ namespace vision_landing{
         rateClient_.call(rateMsg_);
         
         ROS_INFO("Stream rate is set");
+
+        killthread = false;
 
     }
 
@@ -158,6 +163,47 @@ namespace vision_landing{
     void DroneController::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg){
 
         poseMsg_ = *msg;
+
+    }
+
+    void DroneController::printSomething(){
+
+        ros::Rate r(5);
+        while(true){
+
+            if(killthread){return;}
+
+            ROS_INFO("SO THIS WORKING");
+            r.sleep();
+        }
+
+    }
+
+    void DroneController::rcinCallback(const mavros_msgs::RCIn::ConstPtr& msg){
+
+        if (rcin_prev.channels.empty()){
+
+            rcin_prev = *msg;
+            return;
+            
+        }
+
+        mavros_msgs::RCIn rcin_now = *msg;
+
+        if (rcin_now.channels[8] > 1500 && rcin_prev.channels[8] < 1500){
+
+            killthread = false;
+            missionThread = boost::thread(&DroneController::printSomething, this);
+
+        }
+
+        if (rcin_now.channels[8] < 1500 && rcin_prev.channels[8] > 1500){
+
+            killthread = true;
+
+        }
+
+        rcin_prev = rcin_now;
 
     }
 

@@ -140,8 +140,8 @@ namespace fractal_marker{
 
         }                
 
-        std::string pointStringX = std::to_string(poseStamped.pose.position.x);
-        std::string pointStringY = std::to_string(poseStamped.pose.position.y);
+        std::string pointStringX = "x = " + std::to_string(poseStamped.pose.position.x);
+        std::string pointStringY = "y = " + std::to_string(poseStamped.pose.position.y);
         cv::putText(InImage, pointStringX, cvPoint(25,30), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cvScalar(200,200,250), 1, CV_AA);
         cv::putText(InImage, pointStringY, cvPoint(25,30+25), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cvScalar(200,200,250), 1, CV_AA);
 

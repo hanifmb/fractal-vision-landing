@@ -15,6 +15,7 @@
 #include <mavros_msgs/StreamRate.h>
 #include <sensor_msgs/Range.h>
 #include "vision_landing/teleop.h"
+#include <mavros_msgs/RCIn.h>
 
 
 namespace vision_landing{
@@ -28,7 +29,13 @@ namespace vision_landing{
 
         private:
 
+        bool killthread;
+
         double kp, takeOffAlt;
+
+        boost::thread missionThread;
+
+        mavros_msgs::RCIn rcin_prev;
 
         ros::NodeHandle& nodeHandle_;
 
@@ -41,6 +48,8 @@ namespace vision_landing{
         ros::Subscriber rangefinderSub_;
 
         ros::Subscriber poseSub_;
+        
+        ros::Subscriber rcinSub_;
 
         ros::Publisher rawSetpointPub_;
 
@@ -77,7 +86,7 @@ namespace vision_landing{
 
         void land();
 
-        bool setMode(std::string mode);
+        void rcinCallback(const mavros_msgs::RCIn::ConstPtr& msg);
 
         bool takeOff(double alt);
 
@@ -108,5 +117,8 @@ namespace vision_landing{
 
         void rangefinderCallback(const sensor_msgs::Range::ConstPtr& msg);
 
+        bool setMode(std::string mode);
+
+        void printSomething();
     };
 }
