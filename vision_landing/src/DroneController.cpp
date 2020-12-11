@@ -203,6 +203,11 @@ namespace vision_landing{
 
         }
 
+        ROS_INFO("now");
+        ROS_INFO(std::to_string(rcin_now.channels[8]).c_str());
+        ROS_INFO("prev");
+        ROS_INFO(std::to_string(rcin_prev.channels[8]).c_str());
+
         rcin_prev = rcin_now;
 
     }
