@@ -29,6 +29,8 @@ namespace vision_landing{
 
         private:
 
+        bool firstRCData;
+
         bool killthread;
 
         double kp, takeOffAlt;

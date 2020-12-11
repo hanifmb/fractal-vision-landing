@@ -51,6 +51,7 @@ namespace vision_landing{
         ROS_INFO("Stream rate is set");
 
         killthread = false;
+        firstRCData = true;
 
     }
 
@@ -181,32 +182,29 @@ namespace vision_landing{
 
     void DroneController::rcinCallback(const mavros_msgs::RCIn::ConstPtr& msg){
 
-        if (rcin_prev.channels.empty()){
+        if(firstRCData){
 
             rcin_prev = *msg;
+            firstRCData = false;
             return;
-            
+
         }
 
         mavros_msgs::RCIn rcin_now = *msg;
 
-        if (rcin_now.channels[8] > 1500 && rcin_prev.channels[8] < 1500){
+        if (rcin_now.channels[6] > 1500 && rcin_prev.channels[6] < 1500){
 
             killthread = false;
             missionThread = boost::thread(&DroneController::printSomething, this);
 
         }
 
-        if (rcin_now.channels[8] < 1500 && rcin_prev.channels[8] > 1500){
+        if (rcin_now.channels[6] < 1500 && rcin_prev.channels[6] > 1500){
 
             killthread = true;
 
         }
 
-        ROS_INFO("now");
-        ROS_INFO(std::to_string(rcin_now.channels[8]).c_str());
-        ROS_INFO("prev");
-        ROS_INFO(std::to_string(rcin_prev.channels[8]).c_str());
 
         rcin_prev = rcin_now;
 
