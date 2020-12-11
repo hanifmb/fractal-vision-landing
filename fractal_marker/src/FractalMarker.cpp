@@ -8,7 +8,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <tf/transform_datatypes.h>
 #include <geometry_msgs/Pose.h>
-
+#include <string>
 
 namespace fractal_marker{
 
@@ -25,7 +25,6 @@ namespace fractal_marker{
                                     "/home/odroid/catkin_ws/src/fractal_marker/config/camera/c270.yaml");
     nodeHandle_.param<std::string>("/fractal_marker_node/input_camera_topic", inputCamTopic, "/camera/image_raw");
                                 
-    
     ROS_INFO("------- Fractal Marker param list -------");
     ROS_INFO("markerId: %s", markerID.c_str());
     ROS_INFO("markerSize: %f", markerSize);
@@ -77,6 +76,7 @@ namespace fractal_marker{
 
     void FractalMarker::estimatePose(cv::Mat InImage){
 
+        geometry_msgs::PoseStamped poseStamped;
 
         if(FDetector_.detect(InImage)){
 
@@ -117,7 +117,6 @@ namespace fractal_marker{
                 br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", "camera"));
 
                 //sending pose
-                geometry_msgs::PoseStamped poseStamped;
 
                 geometry_msgs::Quaternion quaternionMsg;
                 geometry_msgs::Point pointMsg;
@@ -141,8 +140,14 @@ namespace fractal_marker{
 
         }                
 
+        std::string pointStringX = std::to_string(poseStamped.pose.position.x);
+        std::string pointStringY = std::to_string(poseStamped.pose.position.y);
+        cv::putText(InImage, pointStringX, cvPoint(25,30), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cvScalar(200,200,250), 1, CV_AA);
+        cv::putText(InImage, pointStringY, cvPoint(25,30+25), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cvScalar(200,200,250), 1, CV_AA);
+
         sensor_msgs::ImagePtr imageMsg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", InImage).toImageMsg();
         imagePub_.publish(imageMsg);
+
     }
 
 }
