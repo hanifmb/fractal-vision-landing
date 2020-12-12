@@ -27,6 +27,7 @@ namespace vision_landing{
         //Publisher
         rawSetpointPub_ = nodeHandle_.advertise<mavros_msgs::PositionTarget>("/mavros/setpoint_raw/local", 1);
         rcOverridePub_ = nodeHandle_.advertise<mavros_msgs::OverrideRCIn>("/mavros/rc/override", 1);
+        localPosPub_ = nodeHandle_.advertise<geometry_msgs::PoseStamped>("mavros/setpoint_position/local", 1);
 
         //client
         armingClient_ = nodeHandle_.serviceClient<mavros_msgs::CommandBool>("/mavros/cmd/arming");
@@ -174,14 +175,14 @@ namespace vision_landing{
 
             if(killthread){return;}
 
-            ROS_INFO("SO THIS WORKING");
+            ROS_INFO("SO IT'S WORKING!");
             r.sleep();
         }
 
     }
 
     void DroneController::rcinCallback(const mavros_msgs::RCIn::ConstPtr& msg){
-
+        //fill in the initial rcin_prev data and return immediately 
         if(firstRCData){
 
             rcin_prev = *msg;
@@ -192,16 +193,22 @@ namespace vision_landing{
 
         mavros_msgs::RCIn rcin_now = *msg;
 
+        //execute landing when channel 7 turns from low to high 
         if (rcin_now.channels[6] > 1500 && rcin_prev.channels[6] < 1500){
 
             killthread = false;
-            missionThread = boost::thread(&DroneController::printSomething, this);
+            missionThread = boost::thread(&DroneController::centering, this);
 
         }
 
+        //kill landing thread and change mode to LOITER when channel 7 turns from high to low 
         if (rcin_now.channels[6] < 1500 && rcin_prev.channels[6] > 1500){
 
             killthread = true;
+
+            //making sure that the thread dies before set to LOITER
+            missionThread.join();
+            setMode("LOITER");
 
         }
 
@@ -224,7 +231,7 @@ namespace vision_landing{
                        std_srvs::Trigger::Response& response)
     {
 
-        startVisionLanding();
+        centering();
         
     }
 
@@ -273,12 +280,16 @@ namespace vision_landing{
 
         while(ros::ok){
 
+            if(killthread){
+                return;
+            }
+
             double outputX = 0;
             double outputY = 0;
-            double outputZ = 0.500;
+            double outputZ = 0.400;
 
             int lastPose = ros::Time::now().sec - poseMsg_.header.stamp.sec;
-            if(lastPose >= 0 && lastPose <= 1){
+            if(lastPose >= 0 && lastPose <= 2){
                 
                 double markerTranslationX = poseMsg_.pose.position.x;
                 double markerTranslationY = poseMsg_.pose.position.y;
@@ -295,15 +306,41 @@ namespace vision_landing{
 
             sendVelocity(-outputX, outputY, -outputZ);
 
-            if(rangeMsg_.range <= 1.2){                      
-                break;
-            }
-
             rate.sleep();
         }
 
-        setMode("LAND");
+    }
 
+    void DroneController::centering(){
+
+        setMode("GUIDED");
+
+        //rate needs to be more than 2hz, otherwise position reference point would be reset
+
+        if(killthread){
+            return;
+        }
+
+        mavros_msgs::PositionTarget velocityRawMsg;
+        velocityRawMsg.coordinate_frame = mavros_msgs::PositionTarget::FRAME_BODY_NED;
+        velocityRawMsg.type_mask =
+                mavros_msgs::PositionTarget::IGNORE_VX |
+                mavros_msgs::PositionTarget::IGNORE_VY |
+                mavros_msgs::PositionTarget::IGNORE_VZ |
+                mavros_msgs::PositionTarget::IGNORE_AFX |
+                mavros_msgs::PositionTarget::IGNORE_AFX |
+                mavros_msgs::PositionTarget::IGNORE_AFY |
+                mavros_msgs::PositionTarget::IGNORE_AFZ |
+                mavros_msgs::PositionTarget::IGNORE_YAW |
+                mavros_msgs::PositionTarget::IGNORE_YAW_RATE;
+        
+        velocityRawMsg.position.x = poseMsg_.pose.position.x;
+        velocityRawMsg.position.y = -poseMsg_.pose.position.y;
+        velocityRawMsg.position.z = 0;
+        velocityRawMsg.header.stamp = ros::Time::now();
+
+        rawSetpointPub_.publish(velocityRawMsg);
+        
     }
 
     bool DroneController::waitToReachWP(int wp){

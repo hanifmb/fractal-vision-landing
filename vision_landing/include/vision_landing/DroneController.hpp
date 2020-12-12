@@ -55,6 +55,8 @@ namespace vision_landing{
 
         ros::Publisher rawSetpointPub_;
 
+        ros::Publisher localPosPub_;
+
         ros::Publisher rcOverridePub_;
 
         ros::ServiceClient setModeClient_;
@@ -122,5 +124,7 @@ namespace vision_landing{
         bool setMode(std::string mode);
 
         void printSomething();
+
+        void centering();
     };
 }
