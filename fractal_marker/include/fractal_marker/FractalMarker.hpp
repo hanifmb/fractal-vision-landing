@@ -2,6 +2,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <image_transport/image_transport.h>
 #include <aruco/aruco.h>
+#include <std_msgs/Float64.h>
 
 namespace fractal_marker{
 
@@ -12,7 +13,12 @@ namespace fractal_marker{
         FractalMarker(ros::NodeHandle& nodeHandle);
 
         private:
-        
+
+        std_msgs::Float64 relAlt; 
+
+        void altCallback(const std_msgs::Float64::ConstPtr& msg);
+
+        ros::Subscriber altSub_;
 
         cv::Mat __resize(const cv::Mat& in, int width);
 

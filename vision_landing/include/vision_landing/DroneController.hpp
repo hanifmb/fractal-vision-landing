@@ -29,6 +29,8 @@ namespace vision_landing{
 
         private:
 
+        bool enableZLanding;
+
         bool firstRCData;
 
         bool killthread;
@@ -106,7 +108,7 @@ namespace vision_landing{
 
         void sendVelocity(double x, double y, double z);
 
-        void moveToTarget();
+        void moveToTarget(double x, double y, double z, double multiplier);
 
         void Mission();
 
@@ -126,5 +128,7 @@ namespace vision_landing{
         void printSomething();
 
         void centering();
+
+        void sendPosition(double x, double y, double z, double multiplier);
     };
 }

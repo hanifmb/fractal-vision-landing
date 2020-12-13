@@ -53,6 +53,7 @@ namespace vision_landing{
 
         killthread = false;
         firstRCData = true;
+        enableZLanding = false;
 
     }
 
@@ -152,7 +153,62 @@ namespace vision_landing{
 
     }
 
-    void DroneController::moveToTarget(){
+    void DroneController::sendPosition(double x, double y, double z, double multiplier){
+
+            mavros_msgs::PositionTarget positionRawMsg;
+            positionRawMsg.coordinate_frame = mavros_msgs::PositionTarget::FRAME_BODY_NED;
+            positionRawMsg.type_mask =
+                    mavros_msgs::PositionTarget::IGNORE_VX |
+                    mavros_msgs::PositionTarget::IGNORE_VY |
+                    mavros_msgs::PositionTarget::IGNORE_VZ |
+                    mavros_msgs::PositionTarget::IGNORE_AFX |
+                    mavros_msgs::PositionTarget::IGNORE_AFX |
+                    mavros_msgs::PositionTarget::IGNORE_AFY |
+                    mavros_msgs::PositionTarget::IGNORE_AFZ |
+                    mavros_msgs::PositionTarget::IGNORE_YAW |
+                    mavros_msgs::PositionTarget::IGNORE_YAW_RATE;
+            
+            positionRawMsg.position.x = x * multiplier;
+            positionRawMsg.position.y = y * multiplier;
+            positionRawMsg.position.z = z * multiplier;
+            positionRawMsg.header.stamp = ros::Time::now();
+
+            rawSetpointPub_.publish(positionRawMsg);
+    }
+
+    void DroneController::moveToTarget(double x, double y, double z, double multiplier){
+
+            mavros_msgs::PositionTarget positionRawMsg;
+            positionRawMsg.coordinate_frame = mavros_msgs::PositionTarget::FRAME_BODY_NED;
+            positionRawMsg.type_mask =
+                    mavros_msgs::PositionTarget::IGNORE_VX |
+                    mavros_msgs::PositionTarget::IGNORE_VY |
+                    mavros_msgs::PositionTarget::IGNORE_VZ |
+                    mavros_msgs::PositionTarget::IGNORE_AFX |
+                    mavros_msgs::PositionTarget::IGNORE_AFX |
+                    mavros_msgs::PositionTarget::IGNORE_AFY |
+                    mavros_msgs::PositionTarget::IGNORE_AFZ |
+                    mavros_msgs::PositionTarget::IGNORE_YAW |
+                    mavros_msgs::PositionTarget::IGNORE_YAW_RATE;
+            
+            positionRawMsg.position.x = x * multiplier;
+            positionRawMsg.position.y = y * multiplier;
+
+            double BLIND_LAND_ALT = 1.00;
+            positionRawMsg.position.z = (z * multiplier) - BLIND_LAND_ALT;
+            positionRawMsg.header.stamp = ros::Time::now();
+
+            rawSetpointPub_.publish(positionRawMsg);
+
+            double BILND_LAND_HORIZONTAL_THRESHOLD = 0.4;
+
+            if(std::abs(poseMsg_.pose.position.x) < BILND_LAND_HORIZONTAL_THRESHOLD && 
+                std::abs(poseMsg_.pose.position.y) < BILND_LAND_HORIZONTAL_THRESHOLD &&
+                std::abs(poseMsg_.pose.position.z < BLIND_LAND_ALT * 1.1)){
+                    
+                    setMode("LAND");
+
+            }
 
     }
 
@@ -165,6 +221,26 @@ namespace vision_landing{
     void DroneController::poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg){
 
         poseMsg_ = *msg;
+
+        if(enableZLanding){
+
+            double BLIND_LAND_ALT = 1.00;
+            sendPosition(-poseMsg_.pose.position.y, 
+                        -poseMsg_.pose.position.x, 
+                        -(poseMsg_.pose.position.z - BLIND_LAND_ALT), 
+                        1.00);
+
+            double BILND_LAND_HORIZONTAL_THRESHOLD = 0.4;
+
+            if(std::abs(poseMsg_.pose.position.x) < BILND_LAND_HORIZONTAL_THRESHOLD && 
+                std::abs(poseMsg_.pose.position.y) < BILND_LAND_HORIZONTAL_THRESHOLD &&
+                std::abs(poseMsg_.pose.position.z < BLIND_LAND_ALT * 1.1)){
+                    
+                    setMode("LAND");
+
+            }
+
+        }
 
     }
 
@@ -205,6 +281,7 @@ namespace vision_landing{
         if (rcin_now.channels[6] < 1500 && rcin_prev.channels[6] > 1500){
 
             killthread = true;
+            enableZLanding = false;
 
             //making sure that the thread dies before set to LOITER
             missionThread.join();
@@ -304,7 +381,7 @@ namespace vision_landing{
             ROS_INFO("outputY = %f", outputY);
             ROS_INFO("last pose = %i", lastPose);
 
-            sendVelocity(-outputX, outputY, -outputZ);
+            sendVelocity(-outputY, -outputX, -outputZ);
 
             rate.sleep();
         }
@@ -315,32 +392,19 @@ namespace vision_landing{
 
         setMode("GUIDED");
 
-        //rate needs to be more than 2hz, otherwise position reference point would be reset
-
         if(killthread){
             return;
         }
 
-        mavros_msgs::PositionTarget velocityRawMsg;
-        velocityRawMsg.coordinate_frame = mavros_msgs::PositionTarget::FRAME_BODY_NED;
-        velocityRawMsg.type_mask =
-                mavros_msgs::PositionTarget::IGNORE_VX |
-                mavros_msgs::PositionTarget::IGNORE_VY |
-                mavros_msgs::PositionTarget::IGNORE_VZ |
-                mavros_msgs::PositionTarget::IGNORE_AFX |
-                mavros_msgs::PositionTarget::IGNORE_AFX |
-                mavros_msgs::PositionTarget::IGNORE_AFY |
-                mavros_msgs::PositionTarget::IGNORE_AFZ |
-                mavros_msgs::PositionTarget::IGNORE_YAW |
-                mavros_msgs::PositionTarget::IGNORE_YAW_RATE;
-        
-        velocityRawMsg.position.x = poseMsg_.pose.position.x;
-        velocityRawMsg.position.y = -poseMsg_.pose.position.y;
-        velocityRawMsg.position.z = 0;
-        velocityRawMsg.header.stamp = ros::Time::now();
+        sendPosition(-poseMsg_.pose.position.y, 
+                    -poseMsg_.pose.position.x, 
+                    0, 
+                    1.00);
 
-        rawSetpointPub_.publish(velocityRawMsg);
-        
+        ros::Duration(8).sleep();
+
+        enableZLanding = true;
+
     }
 
     bool DroneController::waitToReachWP(int wp){

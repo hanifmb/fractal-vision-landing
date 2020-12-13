@@ -9,6 +9,7 @@
 #include <tf/transform_datatypes.h>
 #include <geometry_msgs/Pose.h>
 #include <string>
+#include <std_msgs/Float64.h>
 
 namespace fractal_marker{
 
@@ -38,6 +39,7 @@ namespace fractal_marker{
     imagePub_ = it.advertise("camera/fractal_image", 1);
 
     fractalPosePub_ = nodeHandle_.advertise<geometry_msgs::PoseStamped>("/fractal_marker_node/pose", 1);
+    altSub_ = nodeHandle_.subscribe<std_msgs::Float64>("/mavros/global_position/rel_alt", 1, &FractalMarker::altCallback, this);
 
     CamParam_.readFromXMLFile(cameraParamFile);
     FDetector_.setConfiguration(markerID);
@@ -142,11 +144,22 @@ namespace fractal_marker{
 
         std::string pointStringX = "x = " + std::to_string(poseStamped.pose.position.x);
         std::string pointStringY = "y = " + std::to_string(poseStamped.pose.position.y);
-        cv::putText(InImage, pointStringX, cvPoint(25,30), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cvScalar(200,200,250), 1, CV_AA);
-        cv::putText(InImage, pointStringY, cvPoint(25,30+25), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cvScalar(200,200,250), 1, CV_AA);
+        std::string pointStringZ = "z = " + std::to_string(poseStamped.pose.position.z);
+        std::string alt = "alt baro = " + std::to_string(relAlt.data);
+
+        cv::putText(InImage, pointStringX, cvPoint(25,30), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cvScalar(0,0,255), 1, CV_AA);
+        cv::putText(InImage, pointStringY, cvPoint(25,30+25), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cvScalar(0,0,255), 1, CV_AA);
+        cv::putText(InImage, pointStringZ, cvPoint(25,30+50), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cvScalar(0,0,255), 1, CV_AA);
+        cv::putText(InImage, alt, cvPoint(25,30+75), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cvScalar(0,0,255), 1, CV_AA);
 
         sensor_msgs::ImagePtr imageMsg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", InImage).toImageMsg();
         imagePub_.publish(imageMsg);
+
+    }
+
+    void FractalMarker::altCallback(const std_msgs::Float64::ConstPtr& msg){
+
+        relAlt = *msg;
 
     }
 
