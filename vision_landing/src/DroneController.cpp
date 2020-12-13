@@ -234,7 +234,7 @@ namespace vision_landing{
 
             if(std::abs(poseMsg_.pose.position.x) < BILND_LAND_HORIZONTAL_THRESHOLD && 
                 std::abs(poseMsg_.pose.position.y) < BILND_LAND_HORIZONTAL_THRESHOLD &&
-                std::abs(poseMsg_.pose.position.z < BLIND_LAND_ALT * 1.1)){
+                std::abs(poseMsg_.pose.position.z) < BLIND_LAND_ALT * 1.1){
                     
                     setMode("LAND");
 
