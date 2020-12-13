@@ -124,7 +124,7 @@ namespace vision_landing{
 
     double DroneController::proportionalControl(double Kp, double currentState, double setpoint){
 
-        double error = setpoint - currentState;
+        double error = currentState - setpoint;
         double output = error * Kp;
 
         return output;
@@ -273,7 +273,7 @@ namespace vision_landing{
         if (rcin_now.channels[6] > 1500 && rcin_prev.channels[6] < 1500){
 
             killthread = false;
-            missionThread = boost::thread(&DroneController::centering, this);
+            missionThread = boost::thread(&DroneController::centeringVelocity_test, this);
 
         }
 
@@ -363,7 +363,7 @@ namespace vision_landing{
 
             double outputX = 0;
             double outputY = 0;
-            double outputZ = 0.400;
+            double outputZ = 0.35;
 
             int lastPose = ros::Time::now().sec - poseMsg_.header.stamp.sec;
             if(lastPose >= 0 && lastPose <= 2){
@@ -374,14 +374,74 @@ namespace vision_landing{
                 outputX = proportionalControl(kp, markerTranslationX, 0);
                 outputY = proportionalControl(kp, markerTranslationY, 0);
 
+                if(poseMsg_.pose.position.z < 1.1 &&
+                    poseMsg_.pose.position.x < 0.05 &&
+                    poseMsg_.pose.position.y < 0.05)
+                {
+                    setMode("LAND");
+                    return;
+                }
 
             }
+
+            if(poseMsg_.pose.position.z < 1.1){outputZ = 0;} // if last pose is less than 1.1 then althold 
+
+            double PID_LIMIT_XY = 1.400;
+
+            if(outputX>PID_LIMIT_XY){outputX=PID_LIMIT_XY;}
+            if(outputX<-PID_LIMIT_XY){outputX=-PID_LIMIT_XY;}
+            if(outputY>PID_LIMIT_XY){outputY=PID_LIMIT_XY;}
+            if(outputY<-PID_LIMIT_XY){outputY=-PID_LIMIT_XY;}
 
             ROS_INFO("outputX = %f", outputX);
             ROS_INFO("outputY = %f", outputY);
             ROS_INFO("last pose = %i", lastPose);
 
-            sendVelocity(-outputY, -outputX, -outputZ);
+            sendVelocity(outputX, -outputY, -outputZ);
+
+            rate.sleep();
+        }
+
+    }
+
+    void DroneController::centeringVelocity_test(){
+
+        setMode("GUIDED");
+
+        ros::Rate rate(20);
+        while(ros::ok){
+
+            if(killthread){
+                return;
+            }
+
+            double outputX = 0;
+            double outputY = 0;
+            double outputZ = 0;
+
+            int lastPose = ros::Time::now().sec - poseMsg_.header.stamp.sec;
+            if(lastPose >= 0 && lastPose <= 2){
+                
+                double markerTranslationX = poseMsg_.pose.position.x;
+                double markerTranslationY = poseMsg_.pose.position.y;
+
+                outputX = proportionalControl(kp, markerTranslationX, 0);
+                outputY = proportionalControl(kp, markerTranslationY, 0);
+
+            }
+
+            double PID_LIMIT_XY = 1.400;
+
+            if(outputX>PID_LIMIT_XY){outputX=PID_LIMIT_XY;}
+            if(outputX<-PID_LIMIT_XY){outputX=-PID_LIMIT_XY;}
+            if(outputY>PID_LIMIT_XY){outputY=PID_LIMIT_XY;}
+            if(outputY<-PID_LIMIT_XY){outputY=-PID_LIMIT_XY;}
+
+            ROS_INFO("outputX = %f", outputX);
+            ROS_INFO("outputY = %f", outputY);
+            ROS_INFO("last pose = %i", lastPose);
+
+            sendVelocity(outputX, -outputY, -outputZ);
 
             rate.sleep();
         }
@@ -403,7 +463,8 @@ namespace vision_landing{
 
         ros::Duration(8).sleep();
 
-        enableZLanding = true;
+        land();
+        //enableZLanding = true;
 
     }
 

@@ -130,5 +130,7 @@ namespace vision_landing{
         void centering();
 
         void sendPosition(double x, double y, double z, double multiplier);
+
+        void centeringVelocity_test();
     };
 }
