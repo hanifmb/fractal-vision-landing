@@ -46,7 +46,7 @@ namespace fractal_marker{
 
     if (CamParam_.isValid())
     {
-        cv::Size sz(640, 480);
+        cv::Size sz(960, 720);
         CamParam_.resize(sz);
         FDetector_.setParams(CamParam_, markerSize);
     }
