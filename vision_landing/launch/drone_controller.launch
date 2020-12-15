@@ -1,7 +1,7 @@
 <launch>
 
     <arg name="kp"        default="0.5"/>
-    <arg name="alt"       default="10"/>    <!-- in m -->
+    <arg name="alt"       default="12"/>    <!-- in m -->
 
     <node pkg="vision_landing" type="drone_controller_node" name="drone_controller_node" output="screen">
         <param name="kp"    value="$(arg kp)"/>   <!-- proporsional control -->

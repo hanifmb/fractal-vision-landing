@@ -29,13 +29,13 @@ namespace vision_landing{
         rcOverridePub_ = nodeHandle_.advertise<mavros_msgs::OverrideRCIn>("/mavros/rc/override", 1);
         localPosPub_ = nodeHandle_.advertise<geometry_msgs::PoseStamped>("mavros/setpoint_position/local", 1);
 
-        //client
+        //clients
         armingClient_ = nodeHandle_.serviceClient<mavros_msgs::CommandBool>("/mavros/cmd/arming");
         setModeClient_ = nodeHandle_.serviceClient<mavros_msgs::SetMode>("/mavros/set_mode");
         takeOffClient_ = nodeHandle_.serviceClient<mavros_msgs::CommandTOL>("/mavros/cmd/takeoff");
         rateClient_ = nodeHandle_.serviceClient<mavros_msgs::StreamRate>("/mavros/set_stream_rate");
 
-        //server
+        //servers
         landingServer_ = nodeHandle_.advertiseService("/start_vision_landing", &DroneController::triggerVisionLanding, this);
         teleopServer_ = nodeHandle_.advertiseService("/teleop/command", &DroneController::teleop, this);
 
@@ -87,6 +87,10 @@ namespace vision_landing{
          
         //wait until altitude is reached
         while(currentRelativeAlt_.data < alt*0.95){
+
+            if(killthread){
+                return false;
+            }
 
             std::cout << "altitude " << currentRelativeAlt_.data << std::endl; 
             ros::Duration(0.5).sleep();
@@ -327,9 +331,6 @@ namespace vision_landing{
 
     bool DroneController::startVisionLanding(){
 
-        tf::TransformListener listener;
-        tf::StampedTransform transform;
-
         setMode("GUIDED");
 
         arm();
@@ -343,6 +344,10 @@ namespace vision_landing{
         ROS_INFO("Waiting to reach WP...");
 
         waitToReachWP(1);
+
+        centering();
+
+        ros::Duration(8).sleep();
 
         land();
 
@@ -375,8 +380,8 @@ namespace vision_landing{
                 outputY = proportionalControl(kp, markerTranslationY, 0);
 
                 if(poseMsg_.pose.position.z < 1.1 &&
-                    poseMsg_.pose.position.x < 0.05 &&
-                    poseMsg_.pose.position.y < 0.05)
+                    poseMsg_.pose.position.x < 0.1 &&
+                    poseMsg_.pose.position.y < 0.1)
                 {
                     setMode("LAND");
                     return;
@@ -397,7 +402,7 @@ namespace vision_landing{
             ROS_INFO("outputY = %f", outputY);
             ROS_INFO("last pose = %i", lastPose);
 
-            sendVelocity(outputX, -outputY, -outputZ);
+            sendVelocity(-outputY, -outputX, -outputZ);
 
             rate.sleep();
         }
@@ -441,7 +446,7 @@ namespace vision_landing{
             ROS_INFO("outputY = %f", outputY);
             ROS_INFO("last pose = %i", lastPose);
 
-            sendVelocity(outputX, -outputY, -outputZ);
+            sendVelocity(-outputY, -outputX, -outputZ);
 
             rate.sleep();
         }
@@ -461,9 +466,6 @@ namespace vision_landing{
                     0, 
                     1.00);
 
-        ros::Duration(8).sleep();
-
-        land();
         //enableZLanding = true;
 
     }
@@ -472,7 +474,13 @@ namespace vision_landing{
 
         //timeout currently infinite
         while(missionReachedMsg_.wp_seq != wp){
-           ros::Duration(1).sleep();
+
+            if(killthread){
+                return false;
+            }
+
+            ros::Duration(1).sleep();
+
         }
 
     }
