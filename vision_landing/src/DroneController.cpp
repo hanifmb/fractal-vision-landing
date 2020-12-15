@@ -457,17 +457,32 @@ namespace vision_landing{
 
         setMode("GUIDED");
 
-        if(killthread){
-            return;
+        int lastPose = ros::Time::now().sec - poseMsg_.header.stamp.sec;
+
+        ros::Rate checkPosRate(20);
+        while(ros::ok()){
+
+            if(killthread){
+                return;
+            }
+
+            if(lastPose >= 0 && lastPose <= 1){
+
+                sendPosition(-poseMsg_.pose.position.y, 
+                            -poseMsg_.pose.position.x, 
+                            0, 
+                            1.00);
+
+                return;
+            }else{
+                ROS_INFO("NO LATEST FRACTAL");
+            }
+
+            checkPosRate.sleep();
+
         }
 
-        sendPosition(-poseMsg_.pose.position.y, 
-                    -poseMsg_.pose.position.x, 
-                    0, 
-                    1.00);
-
         //enableZLanding = true;
-
     }
 
     bool DroneController::waitToReachWP(int wp){
