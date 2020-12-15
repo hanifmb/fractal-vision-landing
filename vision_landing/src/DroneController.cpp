@@ -277,7 +277,7 @@ namespace vision_landing{
         if (rcin_now.channels[6] > 1500 && rcin_prev.channels[6] < 1500){
 
             killthread = false;
-            missionThread = boost::thread(&DroneController::centeringVelocity_test, this);
+            missionThread = boost::thread(&DroneController::startVisionLanding, this);
 
         }
 
