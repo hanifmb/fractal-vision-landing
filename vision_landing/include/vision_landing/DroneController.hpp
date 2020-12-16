@@ -132,5 +132,10 @@ namespace vision_landing{
         void sendPosition(double x, double y, double z, double multiplier);
 
         void centeringVelocity_test();
+
+        void fractalDetector_f();
+
+        bool enableFractalDetector;
+
     };
 }

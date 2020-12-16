@@ -54,7 +54,8 @@ namespace vision_landing{
         killthread = false;
         firstRCData = true;
         enableZLanding = false;
-
+        enableFractalDetector = false;
+        
     }
 
     bool DroneController::setMode(std::string mode){
@@ -226,6 +227,21 @@ namespace vision_landing{
 
         poseMsg_ = *msg;
 
+        if(enableFractalDetector){
+
+            int lastPose = ros::Time::now().sec - poseMsg_.header.stamp.sec;
+            if(lastPose >= 0 && lastPose <= 2){
+
+                centering();
+
+                ros::Duration(8);
+
+                land();
+
+            }
+
+        }
+
         if(enableZLanding){
 
             double BLIND_LAND_ALT = 1.00;
@@ -277,7 +293,7 @@ namespace vision_landing{
         if (rcin_now.channels[6] > 1500 && rcin_prev.channels[6] < 1500){
 
             killthread = false;
-            missionThread = boost::thread(&DroneController::startVisionLanding, this);
+            missionThread = boost::thread(&DroneController::centeringVelocity_test, this);
 
         }
 
@@ -312,7 +328,7 @@ namespace vision_landing{
                        std_srvs::Trigger::Response& response)
     {
 
-        centering();
+        startVisionLanding();
         
     }
 
@@ -339,19 +355,47 @@ namespace vision_landing{
 
         takeOff(takeOffAlt);
 
+        boost::thread fractalDetectorThread = boost::thread(&DroneController::fractalDetector_f, this);
+
         setMode("AUTO");
 
         ROS_INFO("Waiting to reach WP...");
 
-        waitToReachWP(1);
+        //waitToReachWP(1);
 
-        centering();
-
-        ros::Duration(8).sleep();
-
-        land();
+        fractalDetectorThread.join();
 
         return true;
+    }
+
+    void DroneController::fractalDetector_f(){
+        
+        ros::Rate rate(20);
+        while(ros::ok()){
+
+            if(killthread){
+                return;
+            }
+
+            int lastPose = ros::Time::now().sec - poseMsg_.header.stamp.sec;
+            if(lastPose >= 0 && lastPose <= 2){
+
+                ROS_INFO("FRACTAL FOUND, CENTERING");
+
+                centering();
+                
+                ros::Duration(8).sleep();
+
+                land();
+                return;
+
+            }else{
+                ROS_INFO("LOOKING FOR FRACTAL");
+            }
+
+            rate.sleep();
+        }
+
     }
 
     void DroneController::land(){
@@ -411,45 +455,11 @@ namespace vision_landing{
 
     void DroneController::centeringVelocity_test(){
 
-        setMode("GUIDED");
+        centering();
 
-        ros::Rate rate(20);
-        while(ros::ok){
+        ros::Duration(8).sleep();
 
-            if(killthread){
-                return;
-            }
-
-            double outputX = 0;
-            double outputY = 0;
-            double outputZ = 0;
-
-            int lastPose = ros::Time::now().sec - poseMsg_.header.stamp.sec;
-            if(lastPose >= 0 && lastPose <= 2){
-                
-                double markerTranslationX = poseMsg_.pose.position.x;
-                double markerTranslationY = poseMsg_.pose.position.y;
-
-                outputX = proportionalControl(kp, markerTranslationX, 0);
-                outputY = proportionalControl(kp, markerTranslationY, 0);
-
-            }
-
-            double PID_LIMIT_XY = 1.400;
-
-            if(outputX>PID_LIMIT_XY){outputX=PID_LIMIT_XY;}
-            if(outputX<-PID_LIMIT_XY){outputX=-PID_LIMIT_XY;}
-            if(outputY>PID_LIMIT_XY){outputY=PID_LIMIT_XY;}
-            if(outputY<-PID_LIMIT_XY){outputY=-PID_LIMIT_XY;}
-
-            ROS_INFO("outputX = %f", outputX);
-            ROS_INFO("outputY = %f", outputY);
-            ROS_INFO("last pose = %i", lastPose);
-
-            sendVelocity(-outputY, -outputX, -outputZ);
-
-            rate.sleep();
-        }
+        land();
 
     }
 
@@ -457,30 +467,10 @@ namespace vision_landing{
 
         setMode("GUIDED");
 
-        int lastPose = ros::Time::now().sec - poseMsg_.header.stamp.sec;
-
-        ros::Rate checkPosRate(20);
-        while(ros::ok()){
-
-            if(killthread){
-                return;
-            }
-
-            if(lastPose >= 0 && lastPose <= 1){
-
-                sendPosition(-poseMsg_.pose.position.y, 
-                            -poseMsg_.pose.position.x, 
-                            0, 
-                            1.00);
-
-                return;
-            }else{
-                ROS_INFO("NO LATEST FRACTAL");
-            }
-
-            checkPosRate.sleep();
-
-        }
+        sendPosition(-poseMsg_.pose.position.y, 
+                    -poseMsg_.pose.position.x, 
+                    0, 
+                    1.00);
 
         //enableZLanding = true;
     }
