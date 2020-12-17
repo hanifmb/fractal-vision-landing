@@ -1,0 +1,1 @@
+rosbag record /fractal_marker_node/camera/fractal_image /fractal_marker_node/pose /mavros/global_position/raw/satellites /mavros/global_position/global /mavros/trajectory/path /mavros/local_position/velocity_body /mavros/global_position/home /mavros/state /mavros/global_position/rel_alt /mavros/imu/data
