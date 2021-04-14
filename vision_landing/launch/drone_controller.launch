@@ -1,6 +1,6 @@
 <launch>
 
-    <arg name="kp"        default="0.5"/>
+    <arg name="kp"        default="0.4"/>
     <arg name="alt"       default="12"/>    <!-- in m -->
 
     <node pkg="vision_landing" type="drone_controller_node" name="drone_controller_node" output="screen">

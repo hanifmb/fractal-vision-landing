@@ -293,7 +293,7 @@ namespace vision_landing{
         if (rcin_now.channels[6] > 1500 && rcin_prev.channels[6] < 1500){
 
             killthread = false;
-            missionThread = boost::thread(&DroneController::centeringVelocity_test, this);
+            missionThread = boost::thread(&DroneController::startVisionLanding, this);
 
         }
 
@@ -421,11 +421,11 @@ namespace vision_landing{
                 double markerTranslationY = poseMsg_.pose.position.y;
 
                 outputX = proportionalControl(kp, markerTranslationX, 0);
-                outputY = proportionalControl(kp, markerTranslationY, 0);
+                outputY = proportionalControl(kp, markerTranslationY, 0.1);
 
                 if(poseMsg_.pose.position.z < 1.1 &&
-                    poseMsg_.pose.position.x < 0.1 &&
-                    poseMsg_.pose.position.y < 0.1)
+                    poseMsg_.pose.position.x < 0.2 &&
+                    poseMsg_.pose.position.y < 0.2)
                 {
                     setMode("LAND");
                     return;
@@ -470,7 +470,7 @@ namespace vision_landing{
         sendPosition(-poseMsg_.pose.position.y, 
                     -poseMsg_.pose.position.x, 
                     0, 
-                    1.00);
+                    0.8);
 
         //enableZLanding = true;
     }
