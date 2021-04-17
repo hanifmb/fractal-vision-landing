@@ -1,4 +1,4 @@
-#pragma once 
+#pragma once
 
 #include <ros/ros.h>
 #include <mavros_msgs/CommandBool.h>
@@ -16,19 +16,19 @@
 #include <sensor_msgs/Range.h>
 #include "vision_landing/teleop.h"
 #include <mavros_msgs/RCIn.h>
+#include <mavros_msgs/HomePosition.h>
+#include <mavros_msgs/CommandHome.h>
 
+namespace vision_landing
+{
 
-namespace vision_landing{
+    class DroneController
+    {
 
-    class DroneController{
+    public:
+        DroneController(ros::NodeHandle &nodeHandle);
 
-        public:
-
-        DroneController(ros::NodeHandle& nodeHandle);
-
-
-        private:
-
+    private:
         bool enableZLanding;
 
         bool firstRCData;
@@ -41,7 +41,7 @@ namespace vision_landing{
 
         mavros_msgs::RCIn rcin_prev;
 
-        ros::NodeHandle& nodeHandle_;
+        ros::NodeHandle &nodeHandle_;
 
         ros::Subscriber stateSub_;
 
@@ -52,8 +52,10 @@ namespace vision_landing{
         ros::Subscriber rangefinderSub_;
 
         ros::Subscriber poseSub_;
-        
+
         ros::Subscriber rcinSub_;
+
+        ros::Subscriber homePosSub_;
 
         ros::Publisher rawSetpointPub_;
 
@@ -67,15 +69,19 @@ namespace vision_landing{
 
         ros::ServiceClient armingClient_;
 
-        ros::ServiceClient rateClient_; 
+        ros::ServiceClient rateClient_;
+
+        ros::ServiceClient setHomeClient_;
 
         sensor_msgs::Range rangeMsg_;
 
         mavros_msgs::State stateMsg_;
 
-        mavros_msgs::WaypointReached missionReachedMsg_; 
+        mavros_msgs::WaypointReached missionReachedMsg_;
 
         mavros_msgs::StreamRate rateMsg_;
+
+        mavros_msgs::HomePosition homePosMsg_;
 
         std_msgs::Float64 currentRelativeAlt_;
 
@@ -83,26 +89,30 @@ namespace vision_landing{
 
         geometry_msgs::PoseStamped poseMsg_;
 
+        mavros_msgs::CommandHome commandHomeMsg_;
+
         ros::ServiceServer landingServer_;
 
         ros::ServiceServer teleopServer_;
 
-        bool teleop(vision_landing::teleop::Request& request,
-                       vision_landing::teleop::Response& response);
+        bool teleop(vision_landing::teleop::Request &request,
+                    vision_landing::teleop::Response &response);
 
         void land();
 
-        void rcinCallback(const mavros_msgs::RCIn::ConstPtr& msg);
+        void rcinCallback(const mavros_msgs::RCIn::ConstPtr &msg);
 
         bool takeOff(double alt);
 
-        void relativeAltitudeCallback(const std_msgs::Float64::ConstPtr& msg);
+        void relativeAltitudeCallback(const std_msgs::Float64::ConstPtr &msg);
 
-        void missionReachedCallback(const mavros_msgs::WaypointReached::ConstPtr& msg);
+        void missionReachedCallback(const mavros_msgs::WaypointReached::ConstPtr &msg);
 
-        void stateCallback(const mavros_msgs::State::ConstPtr& msg);
+        void stateCallback(const mavros_msgs::State::ConstPtr &msg);
 
-        void poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
+        void poseCallback(const geometry_msgs::PoseStamped::ConstPtr &msg);
+
+        void homeCallback(const mavros_msgs::HomePosition::ConstPtr &msg);
 
         double proportionalControl(double Kp, double currentState, double setpoint);
 
@@ -114,14 +124,14 @@ namespace vision_landing{
 
         bool arm();
 
-        bool triggerVisionLanding(std_srvs::Trigger::Request& request,
-                       std_srvs::Trigger::Response& response);
+        bool triggerVisionLanding(std_srvs::Trigger::Request &request,
+                                  std_srvs::Trigger::Response &response);
 
         bool startVisionLanding();
 
         bool waitToReachWP(int wp);
 
-        void rangefinderCallback(const sensor_msgs::Range::ConstPtr& msg);
+        void rangefinderCallback(const sensor_msgs::Range::ConstPtr &msg);
 
         bool setMode(std::string mode);
 
@@ -136,6 +146,5 @@ namespace vision_landing{
         void fractalDetector_f();
 
         bool enableFractalDetector;
-
     };
-}
+} // namespace vision_landing
