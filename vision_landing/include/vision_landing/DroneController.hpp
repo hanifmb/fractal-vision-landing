@@ -81,6 +81,8 @@ namespace vision_landing
 
         mavros_msgs::StreamRate rateMsg_;
 
+        mavros_msgs::OverrideRCIn overrideMsg_;
+
         mavros_msgs::HomePosition homePosMsg_;
 
         std_msgs::Float64 currentRelativeAlt_;
@@ -145,6 +147,10 @@ namespace vision_landing
 
         void fractalDetector_f();
 
+        void override(int channel, int pwm);
+
         bool enableFractalDetector;
+
+        void testServo();
     };
 } // namespace vision_landing

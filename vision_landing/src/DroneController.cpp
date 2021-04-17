@@ -349,7 +349,13 @@ namespace vision_landing
                                                std_srvs::Trigger::Response &response)
     {
 
-        startVisionLanding();
+        //startVisionLanding();
+        testServo();
+    }
+
+    void DroneController::testServo()
+    {
+        override(7, 1800);
     }
 
     bool DroneController::teleop(vision_landing::teleop::Request &request,
@@ -388,7 +394,9 @@ namespace vision_landing
 
         fractalDetectorThread.join();
 
-        ros::Duration(10).sleep();
+        ros::Duration(5).sleep();
+        override(8, 1800);
+        ros::Duration(5).sleep();
 
         //takeoff procedure
         setMode("GUIDED");
@@ -398,7 +406,6 @@ namespace vision_landing
         commandHomeMsg_.request.altitude = takeOffAlt;
         commandHomeMsg_.request.latitude = homePos.geo.latitude;
         commandHomeMsg_.request.longitude = homePos.geo.longitude;
-
         setHomeClient_.call(commandHomeMsg_);
 
         takeOff(takeOffAlt);
@@ -550,6 +557,14 @@ namespace vision_landing
 
             ros::Duration(1).sleep();
         }
+    }
+
+    void DroneController::override(int channel, int pwm)
+    {
+        boost::array<int, 8> data = {0, 0, 0, 0, 0, 0, 0, 0};
+        data[channel - 1] = pwm;
+        overrideMsg_.channels = data;
+        rcOverridePub_.publish(overrideMsg_);
     }
 
 } // namespace vision_landing
